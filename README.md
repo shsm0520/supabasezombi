@@ -1,0 +1,2 @@
+# supabasezombi
+active supabase forever
