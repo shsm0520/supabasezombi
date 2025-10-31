@@ -14,6 +14,3 @@ services:
       # - MAX_DATA_LIMIT=50
       # - TARGET_DATA_COUNT=30
       
-      # Supabase keys (if using environment variables)
-      # - SUPABASE_KEY_1=your-key-here
-      # - SUPABASE_KEY_2=another-key-here
