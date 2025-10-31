@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  supabasezombi:
+    image: python:3.11-slim # 공식 Python 이미지 사용
+    container_name: supabasezombi
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./main_standalone.py:/app/main.py:ro # 메인 파일
+      - ./config.json:/app/config.json:ro # 설정 파일
+    command: >
+      sh -c "pip install --no-cache-dir supabase requests && python -u main.py"
+    environment:
+      - TZ=Asia/Seoul
+      # Telegram notification (optional - uncomment to enable)
+      # - TELEGRAM_BOT_TOKEN=your-bot-token
+      # - TELEGRAM_CHAT_ID=your-chat-id
+      # Configuration (optional - uncomment to customize)
+      # - RUN_INTERVAL_HOURS=24
+      # - RANDOM_INSERT_MIN=1
+      # - RANDOM_INSERT_MAX=10
+      # - MAX_DATA_LIMIT=50
+      # - TARGET_DATA_COUNT=30
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

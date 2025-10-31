@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Database 1",
+    "supabase_url": "https://xxx.supabase.co",
+    "supabase_key": "eyJhbGci...",
+    "table_name": "keep-alive"
+  }
+]
