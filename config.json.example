@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Database 1",
+    "supabase_url": "https://your-project.supabase.co",
+    "supabase_key": "your-anon-key-here",
+    "table_name": "keep-alive"
+  },
+  {
+    "name": "Database 2",
+    "supabase_url": "https://another-project.supabase.co",
+    "supabase_key_env": "SUPABASE_KEY_2",
+    "table_name": "keep-alive"
+  }
+]

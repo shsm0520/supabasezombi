@@ -18,7 +18,10 @@ Supabase 데이터베이스를 좀비처럼 계속 살려두는 서비스입니�
 git clone https://github.com/shsm0520/supabasezombi.git
 cd supabasezombi
 
-# 2. config.json 수정 (Supabase 정보 입력)
+# 2. 예제에서 config.json 생성
+cp config.json.example config.json
+# config.json 파일을 열어 Supabase 정보 입력
+
 # 3. (선택) docker-compose.yml에 텔레그램 설정
 # 4. 서비스 시작
 docker-compose up -d
@@ -35,7 +38,13 @@ cd supabasezombi
 
 ### 2. Supabase 설정
 
-`config.json` 파일을 수정하여 데이터베이스 정보 입력:
+예제 템플릿에서 `config.json` 생성:
+
+```bash
+cp config.json.example config.json
+```
+
+그리고 `config.json` 파일을 수정하여 데이터베이스 정보 입력:
 
 ```json
 [
@@ -53,6 +62,8 @@ cd supabasezombi
   }
 ]
 ```
+
+> **참고**: `config.json`은 보안을 위해 Git에서 제외됩니다. 항상 `config.json.example`을 템플릿으로 사용하세요.
 
 ### 3. (선택) 텔레그램 알림 및 설정 커스터마이징
 

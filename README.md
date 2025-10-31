@@ -20,7 +20,10 @@ Keep your Supabase databases alive like a zombie! 🧟‍♂️
 git clone https://github.com/shsm0520/supabasezombi.git
 cd supabasezombi
 
-# 2. Edit config.json with your Supabase credentials
+# 2. Create config.json from example
+cp config.json.example config.json
+# Edit config.json with your Supabase credentials
+
 # 3. (Optional) Add Telegram settings to docker-compose.yml
 # 4. Start service
 docker-compose up -d
@@ -37,7 +40,13 @@ cd supabasezombi
 
 ### 2. Configure Supabase
 
-Edit `config.json` with your database credentials:
+Create `config.json` from the example template:
+
+```bash
+cp config.json.example config.json
+```
+
+Then edit `config.json` with your database credentials:
 
 ```json
 [
@@ -55,6 +64,8 @@ Edit `config.json` with your database credentials:
   }
 ]
 ```
+
+> **Note**: `config.json` is excluded from Git for security. Always use `config.json.example` as your template.
 
 ### 3. (Optional) Configure Telegram Notifications & Customize Settings
 
