@@ -1,5 +1,6 @@
 #main config files do ignore
 config.json
+docker-compose.override.yml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

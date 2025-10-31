@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  supabasezombi:
+    environment:
+      # Telegram notification (uncomment to enable)
+      # - TELEGRAM_BOT_TOKEN=your-bot-token
+      # - TELEGRAM_CHAT_ID=your-chat-id
+      
+      # Configuration customization (uncomment to customize)
+      # - RUN_INTERVAL_HOURS=24
+      # - RANDOM_INSERT_MIN=1
+      # - RANDOM_INSERT_MAX=10
+      # - MAX_DATA_LIMIT=50
+      # - TARGET_DATA_COUNT=30
+      
+      # Supabase keys (if using environment variables)
+      # - SUPABASE_KEY_1=your-key-here
+      # - SUPABASE_KEY_2=another-key-here

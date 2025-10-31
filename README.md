@@ -24,7 +24,10 @@ cd supabasezombi
 cp config.json.example config.json
 # Edit config.json with your Supabase credentials
 
-# 3. (Optional) Add Telegram settings to docker-compose.yml
+# 3. (Optional) Create docker-compose.override.yml for custom settings
+cp docker-compose.override.yml.example docker-compose.override.yml
+# Edit docker-compose.override.yml to customize settings
+
 # 4. Start service
 docker-compose up -d
 ```
@@ -69,21 +72,32 @@ Then edit `config.json` with your database credentials:
 
 ### 3. (Optional) Configure Telegram Notifications & Customize Settings
 
-Uncomment and edit the desired settings in `docker-compose.yml`:
+Create `docker-compose.override.yml` from the example:
+
+```bash
+cp docker-compose.override.yml.example docker-compose.override.yml
+```
+
+Then uncomment and edit the desired settings in `docker-compose.override.yml`:
 
 ```yaml
-environment:
-  - TZ=Asia/Seoul
-  # Telegram notification (optional)
-  - TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-  - TELEGRAM_CHAT_ID=123456789
-  # Configuration customization (optional)
-  - RUN_INTERVAL_HOURS=24 # Run interval in hours
-  - RANDOM_INSERT_MIN=1 # Minimum inserts per run
-  - RANDOM_INSERT_MAX=10 # Maximum inserts per run
-  - MAX_DATA_LIMIT=50 # Delete when exceeds this
-  - TARGET_DATA_COUNT=30 # Target count after deletion
+version: "3.8"
+
+services:
+  supabasezombi:
+    environment:
+      # Telegram notification
+      - TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+      - TELEGRAM_CHAT_ID=123456789
+      # Configuration customization
+      - RUN_INTERVAL_HOURS=24
+      - RANDOM_INSERT_MIN=1
+      - RANDOM_INSERT_MAX=10
+      - MAX_DATA_LIMIT=50
+      - TARGET_DATA_COUNT=30
 ```
+
+> **Note**: `docker-compose.override.yml` is excluded from Git, so your settings won't be lost on updates.
 
 ## Usage
 
@@ -168,12 +182,16 @@ Example output:
 
 Manage sensitive information with environment variables.
 
-Add to `docker-compose.yml`:
+Add to `docker-compose.override.yml`:
 
 ```yaml
-environment:
-  - SUPABASE_KEY_1=your-key-here
-  - SUPABASE_KEY_2=another-key-here
+version: "3.8"
+
+services:
+  supabasezombi:
+    environment:
+      - SUPABASE_KEY_1=your-key-here
+      - SUPABASE_KEY_2=another-key-here
 ```
 
 Then reference in `config.json`:

@@ -9,7 +9,6 @@ Modified with enhancements:
 - Automatic cleanup when exceeds 50 entries
 - Single-file implementation
 - Enhanced logging
-
 License: MIT
 """
 

@@ -13,15 +13,8 @@ services:
       sh -c "pip install --no-cache-dir --quiet --no-warn-script-location --disable-pip-version-check supabase requests > /dev/null 2>&1 ; python -u main.py"
     environment:
       - TZ=Asia/Seoul
-      # Telegram notification (optional - uncomment to enable)
-      # - TELEGRAM_BOT_TOKEN=your-bot-token
-      # - TELEGRAM_CHAT_ID=your-chat-id
-      # Configuration (optional - uncomment to customize)
-      # - RUN_INTERVAL_HOURS=24
-      # - RANDOM_INSERT_MIN=1
-      # - RANDOM_INSERT_MAX=10
-      # - MAX_DATA_LIMIT=50
-      # - TARGET_DATA_COUNT=30
+      # For custom settings, create docker-compose.override.yml
+      # See docker-compose.override.yml.example for template
     logging:
       driver: "json-file"
       options:

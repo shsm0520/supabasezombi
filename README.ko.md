@@ -22,7 +22,10 @@ cd supabasezombi
 cp config.json.example config.json
 # config.json 파일을 열어 Supabase 정보 입력
 
-# 3. (선택) docker-compose.yml에 텔레그램 설정
+# 3. (선택) 커스텀 설정 파일 생성
+cp docker-compose.override.yml.example docker-compose.override.yml
+# docker-compose.override.yml 파일을 수정하여 원하는 설정 입력
+
 # 4. 서비스 시작
 docker-compose up -d
 ```
@@ -67,21 +70,32 @@ cp config.json.example config.json
 
 ### 3. (선택) 텔레그램 알림 및 설정 커스터마이징
 
-`docker-compose.yml`에서 필요한 설정의 주석을 해제하고 값을 수정:
+예제에서 `docker-compose.override.yml` 생성:
+
+```bash
+cp docker-compose.override.yml.example docker-compose.override.yml
+```
+
+그리고 `docker-compose.override.yml`에서 필요한 설정의 주석을 해제하고 값을 수정:
 
 ```yaml
-environment:
-  - TZ=Asia/Seoul
-  # 텔레그램 알림 (선택)
-  - TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-  - TELEGRAM_CHAT_ID=123456789
-  # 실행 설정 커스터마이징 (선택)
-  - RUN_INTERVAL_HOURS=24 # 실행 주기 (시간)
-  - RANDOM_INSERT_MIN=1 # 최소 삽입 개수
-  - RANDOM_INSERT_MAX=10 # 최대 삽입 개수
-  - MAX_DATA_LIMIT=50 # 이 개수 넘으면 삭제
-  - TARGET_DATA_COUNT=30 # 삭제 후 목표 개수
+version: "3.8"
+
+services:
+  supabasezombi:
+    environment:
+      # 텔레그램 알림
+      - TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+      - TELEGRAM_CHAT_ID=123456789
+      # 실행 설정 커스터마이징
+      - RUN_INTERVAL_HOURS=24
+      - RANDOM_INSERT_MIN=1
+      - RANDOM_INSERT_MAX=10
+      - MAX_DATA_LIMIT=50
+      - TARGET_DATA_COUNT=30
 ```
+
+> **참고**: `docker-compose.override.yml`은 Git에서 제외되므로 업데이트 시 설정이 보존됩니다.
 
 ## 실행 방법
 
@@ -166,12 +180,16 @@ docker logs -f supabasezombi
 
 민감한 정보는 환경변수로 관리할 수 있습니다.
 
-`docker-compose.yml`에서 환경변수 추가:
+`docker-compose.override.yml`에서 환경변수 추가:
 
 ```yaml
-environment:
-  - SUPABASE_KEY_1=your-key-here
-  - SUPABASE_KEY_2=another-key-here
+version: "3.8"
+
+services:
+  supabasezombi:
+    environment:
+      - SUPABASE_KEY_1=your-key-here
+      - SUPABASE_KEY_2=another-key-here
 ```
 
 그리고 `config.json`에서 참조:
