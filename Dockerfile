@@ -8,7 +8,6 @@ RUN pip install --no-cache-dir --quiet --no-warn-script-location --disable-pip-v
 
 # 파일 복사
 COPY main_standalone.py main.py
-COPY config.json config.json
 
 # 환경 변수 설정
 ENV TZ=Asia/Seoul

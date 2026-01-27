@@ -9,6 +9,8 @@ services:
     #   dockerfile: Dockerfile
     container_name: supabasezombi
     restart: unless-stopped
+    volumes:
+      - ./config.json:/app/config.json:ro
     env_file:
       - .env
     environment:
