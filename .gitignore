@@ -2,6 +2,10 @@
 config.json
 docker-compose.override.yml
 
+# Environment variables
+.env
+.env.local
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
