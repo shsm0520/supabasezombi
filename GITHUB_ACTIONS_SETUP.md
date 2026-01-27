@@ -7,18 +7,10 @@
 
 ## 1. GitHub Actions 설정 (이미지 빌드 & Push)
 
-### GitHub Secrets 추가 (선택)
+### 설정 불필요
 
-Docker Hub에도 이미지를 push하려면 `Settings > Secrets and variables > Actions`:
-
-| Secret 이름 | 설명 |
-|-----------|------|
-| `DOCKER_USERNAME` | Docker Hub 사용자명 |
-| `DOCKER_PASSWORD` | Docker Hub 비밀번호/토큰 |
-
-**참고**: 
-- `GITHUB_TOKEN`은 자동으로 제공 (GHCR 사용)
-- Docker Hub를 사용하지 않으면 위 Secrets 불필요
+GitHub Actions는 자동으로 GHCR(GitHub Container Registry)에 이미지를 push합니다.
+별도의 Secrets 설정이 필요 없습니다. (`GITHUB_TOKEN`은 자동 제공)
 
 ### 이미지 빌드 트리거
 
@@ -29,7 +21,6 @@ Docker Hub에도 이미지를 push하려면 `Settings > Secrets and variables > 
 ### 빌드된 이미지 위치
 
 - GHCR: `ghcr.io/your-username/supabasezombi:latest`
-- Docker Hub: `your-dockerhub-username/supabasezombi:latest`
 
 ## 2. 서버 배포 (이미지 Pull & 실행)
 
@@ -124,6 +115,7 @@ docker-compose up --build -d
 ## 5. 트러블슈팅
 
 ### GitHub Actions 로그 확인
+
 1. GitHub 저장소 > Actions 탭
 2. 실행된 workflow 클릭
 3. 각 step의 로그 확인
@@ -131,16 +123,19 @@ docker-compose up --build -d
 ### 일반적인 오류
 
 #### 이미지를 찾을 수 없음
+
 - GHCR 이미지가 private인 경우 로그인 필요:
   ```bash
   echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
   ```
 
 #### 권한 오류
+
 - GitHub 저장소 > Settings > Actions > General
 - "Workflow permissions"를 "Read and write permissions"로 설정
 
 #### 서버에서 이미지 Pull 실패
+
 ```bash
 # 이미지 경로 확인
 docker-compose config
@@ -153,12 +148,12 @@ docker pull ghcr.io/your-username/supabasezombi:latest
 
 - `.env`와 `config.json`은 Git에 커밋되지 않음 (`.gitignore`에 포함)
 - 서버에만 실제 설정 파일 저장
-- GitHub Secrets는 이미지 빌드용 (Docker Hub 로그인 등)
 - Supabase 키는 절대 코드에 하드코딩하지 말것
 
 ## 7. 업데이트 방법
 
 ### 새 버전 배포
+
 ```bash
 # 서버에서 실행
 docker-compose pull
@@ -166,6 +161,7 @@ docker-compose up -d
 ```
 
 ### 특정 버전 사용
+
 ```yaml
 # docker-compose.yml
 services:
