@@ -126,11 +126,12 @@ cd supabasezombi
 docker run -d \
   --name supabasezombi \
   --restart unless-stopped \
+  -w /app \
   -v $(pwd)/main_standalone.py:/app/main.py:ro \
   -v $(pwd)/config.json:/app/config.json:ro \
   -e TZ=Asia/Seoul \
   python:3.11-slim \
-  sh -c "pip install --no-cache-dir supabase requests && python -u /app/main.py"
+  sh -c "pip install --no-cache-dir supabase requests && python -u main.py"
 
 # 로그 확인
 docker logs -f supabasezombi
