@@ -44,6 +44,43 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 # ========== Helper Functions ==========
+def load_config():
+    """Load configuration from config.json based on environment, script directory, or current working directory."""
+    candidate_paths = []
+
+    env_config_path = os.getenv('CONFIG_PATH')
+    if env_config_path:
+        candidate_paths.append(env_config_path)
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidate_paths.append(os.path.join(script_dir, 'config.json'))
+    candidate_paths.append(os.path.join(os.getcwd(), 'config.json'))
+    candidate_paths.append('config.json')
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_paths = []
+    for p in candidate_paths:
+        if p and p not in seen:
+            seen.add(p)
+            unique_paths.append(p)
+
+    for path in unique_paths:
+        if os.path.isfile(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as config_file:
+                    return json.load(config_file)
+            except json.JSONDecodeError as e:
+                logging.error(f"Error parsing configuration file '{path}': {e}")
+                return None
+            except Exception as e:
+                logging.error(f"Error reading configuration file '{path}': {e}")
+                return None
+
+    logging.error("Configuration file 'config.json' not found.")
+    return None
+
+
 def send_telegram_message(bot_token: str, chat_id: str, message: str) -> bool:
     """Send a message via Telegram Bot API"""
     if not bot_token or not chat_id:
@@ -120,14 +157,8 @@ class SupabaseClient:
 # ========== Main Logic ==========
 def run_keepalive():
     """Execute the keep-alive logic once"""
-    try:
-        with open('config.json', 'r') as config_file:
-            configs = json.load(config_file)
-    except FileNotFoundError:
-        logging.error("Configuration file 'config.json' not found.")
-        return
-    except json.JSONDecodeError as e:
-        logging.error(f"Error parsing 'config.json': {e}")
+    configs = load_config()
+    if configs is None:
         return
 
     # Read Telegram settings from environment variables
@@ -263,12 +294,8 @@ def main():
             current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
             # Get server count
-            try:
-                with open('config.json', 'r') as config_file:
-                    configs = json.load(config_file)
-                    server_count = len(configs)
-            except:
-                server_count = 0
+            configs = load_config()
+            server_count = len(configs) if configs else 0
             
             logging.info(f"== '{current_date}' Run start ({server_count} servers)")
             run_keepalive()
