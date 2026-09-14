@@ -110,8 +110,8 @@ class SupabaseClient:
             if entry_id is None:
                 return False
 
-            self.client.table(self.table_name).delete().eq('id', entry_id).execute()
-            return True
+            del_response = self.client.table(self.table_name).delete().eq('id', entry_id).execute()
+            return bool(del_response.data and len(del_response.data) > 0)
         except Exception as e:
             logging.error(f"Failed to delete: {e}")
             return False
@@ -137,6 +137,7 @@ def run_keepalive():
     success_count = 0
     total_count = len(configs)
     failed_databases = []
+    warning_databases = []
     has_errors = False
     
     start_time = datetime.now()
@@ -198,11 +199,21 @@ def run_keepalive():
                         delete_count += 1
                     time.sleep(0.1)
                 
-                if delete_count > 0:
-                    logging.info(f"  ✓ SUCCESS | #{count} data | Inserted: {insert_success_count} | Deleted: {delete_count}")
-                else:
-                    logging.info(f"  ⚠️  SUCCESS | #{count} data | Inserted: {insert_success_count} | Delete failed")
+                # Re-count table entries after cleanup
+                final_count = supabase_client.get_table_count()
+                if final_count is None:
+                    final_count = count - delete_count
+
+                if delete_count == num_deletes:
+                    logging.info(f"  ✓ SUCCESS | #{final_count} data | Inserted: {insert_success_count} | Deleted: {delete_count}/{num_deletes}")
+                elif delete_count > 0:
+                    logging.info(f"  ⚠️  PARTIAL SUCCESS | #{final_count} data | Inserted: {insert_success_count} | Deleted: {delete_count}/{num_deletes}")
                     has_errors = True
+                    warning_databases.append(f"{name} (partial cleanup: {delete_count}/{num_deletes})")
+                else:
+                    logging.info(f"  ⚠️  CLEANUP FAILED | #{final_count} data | Inserted: {insert_success_count} | Deleted: 0/{num_deletes}")
+                    has_errors = True
+                    warning_databases.append(f"{name} (cleanup failed: 0/{num_deletes})")
             else:
                 logging.info(f"  ✓ SUCCESS | #{count} data | Inserted: {insert_success_count} | Deleted: 0")
 
@@ -223,11 +234,15 @@ def run_keepalive():
     elif success_count == total_count and has_errors:
         status_msg = f"⚠️ All run complete with warnings ({success_count}/{total_count})"
         logging.info(f"== {status_msg}")
+        if warning_databases:
+            logging.info(f"   Warnings: {', '.join(warning_databases)}")
     else:
         status_msg = f"❌ Run complete with errors ({success_count}/{total_count})"
         logging.info(f"== {status_msg}")
         if failed_databases:
             logging.info(f"   Failed servers: {', '.join(failed_databases)}")
+        if warning_databases:
+            logging.info(f"   Warnings: {', '.join(warning_databases)}")
     
     # Send Telegram notification
     if telegram_bot_token and telegram_chat_id:
@@ -240,10 +255,14 @@ def run_keepalive():
             telegram_msg += "✅ All databases updated successfully!"
         elif success_count == total_count and has_errors:
             telegram_msg += "⚠️ All databases updated with warnings"
+            if warning_databases:
+                telegram_msg += f"\nWarnings: {', '.join(warning_databases)}"
         else:
             telegram_msg += f"❌ {len(failed_databases)} database(s) failed\n"
             if failed_databases:
-                telegram_msg += f"Failed: {', '.join(failed_databases)}"
+                telegram_msg += f"Failed: {', '.join(failed_databases)}\n"
+            if warning_databases:
+                telegram_msg += f"Warnings: {', '.join(warning_databases)}"
         
         send_telegram_message(telegram_bot_token, telegram_chat_id, telegram_msg)
 
