@@ -89,32 +89,47 @@ class SupabaseClient:
             return False
 
     def get_table_count(self) -> int:
-        """Get the count of entries in the table"""
+        """Get the exact count of entries in the table"""
         try:
-            response = self.client.table(self.table_name).select("*").execute()
-            return len(response.data)
+            response = self.client.table(self.table_name).select("*", count="exact", head=True).execute()
+            return response.count if response.count is not None else 0
         except Exception as e:
             logging.error(f"Failed to get count: {e}")
             return None
 
-    def delete_random_entry(self) -> bool:
-        """Delete a random entry from the table"""
-        try:
-            response = self.client.table(self.table_name).select("*").execute()
-            if not response.data:
-                return False
+    def delete_excess_entries(self, num_to_delete: int, batch_size: int = 500) -> int:
+        """Delete excess entries in batches of IDs"""
+        if num_to_delete <= 0:
+            return 0
 
-            entry_to_delete = random.choice(response.data)
-            entry_id = entry_to_delete.get('id')
-            
-            if entry_id is None:
-                return False
+        deleted_total = 0
+        remaining_to_delete = num_to_delete
 
-            self.client.table(self.table_name).delete().eq('id', entry_id).execute()
-            return True
-        except Exception as e:
-            logging.error(f"Failed to delete: {e}")
-            return False
+        while remaining_to_delete > 0:
+            current_batch_limit = min(remaining_to_delete, batch_size)
+            try:
+                # Query IDs to delete (limiting query size)
+                response = self.client.table(self.table_name).select("id").limit(current_batch_limit).execute()
+                if not response.data:
+                    break
+
+                ids_to_delete = [row.get('id') for row in response.data if row.get('id') is not None]
+                if not ids_to_delete:
+                    break
+
+                # Delete batch by IDs
+                del_response = self.client.table(self.table_name).delete().in_("id", ids_to_delete).execute()
+                deleted_in_batch = len(del_response.data) if del_response.data is not None else len(ids_to_delete)
+                deleted_total += deleted_in_batch
+                remaining_to_delete -= deleted_in_batch
+
+                if deleted_in_batch == 0:
+                    break
+            except Exception as e:
+                logging.error(f"Failed batch delete: {e}")
+                break
+
+        return deleted_total
 
 
 # ========== Main Logic ==========
@@ -193,10 +208,7 @@ def run_keepalive():
             delete_count = 0
             if count > max_data_limit:
                 num_deletes = count - target_data_count
-                for _ in range(num_deletes):
-                    if supabase_client.delete_random_entry():
-                        delete_count += 1
-                    time.sleep(0.1)
+                delete_count = supabase_client.delete_excess_entries(num_deletes)
                 
                 if delete_count > 0:
                     logging.info(f"  ✓ SUCCESS | #{count} data | Inserted: {insert_success_count} | Deleted: {delete_count}")
