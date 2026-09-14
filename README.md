@@ -10,7 +10,7 @@ Keep your Supabase databases alive like a zombie! 🧟‍♂️
 - Inserts random 1-10 entries per run
 - Auto cleanup when exceeds 50 entries (maintains ~30)
 - Supports multiple Supabase databases
-- Runs in Docker container
+- Pre-built GHCR Docker image deployment
 - Telegram notification support (optional)
 
 ## Quick Start
@@ -103,8 +103,10 @@ services:
 
 ### Docker Compose (Recommended)
 
+Uses pre-built GHCR image (`ghcr.io/shsm0520/supabasezombi:latest`).
+
 ```bash
-# Start service (no build required!)
+# Start service (pulls latest GHCR image)
 docker-compose up -d
 
 # Check logs
@@ -113,26 +115,21 @@ docker-compose logs -f supabasezombi
 # Stop service
 docker-compose down
 
-# Restart after changes
+# Restart service
 docker-compose restart
 ```
 
-### Docker Direct (Alternative)
+### Docker CLI Direct
+
+Run directly with Docker using the GHCR image:
 
 ```bash
-# Clone first
-git clone https://github.com/shsm0520/supabasezombi.git
-cd supabasezombi
-
-# Edit config.json, then run
 docker run -d \
   --name supabasezombi \
   --restart unless-stopped \
-  -v $(pwd)/main_standalone.py:/app/main.py:ro \
   -v $(pwd)/config.json:/app/config.json:ro \
   -e TZ=Asia/Seoul \
-  python:3.11-slim \
-  sh -c "pip install --no-cache-dir supabase requests && python -u /app/main.py"
+  ghcr.io/shsm0520/supabasezombi:latest
 
 # Check logs
 docker logs -f supabasezombi
@@ -149,11 +146,40 @@ docker rm supabasezombi
 git clone https://github.com/shsm0520/supabasezombi.git
 cd supabasezombi
 
-# Install dependencies
-pip install supabase requests
+# Install pinned dependencies
+pip install -r requirements.txt
 
-# Edit config.json, then run
+# Create config.json, then run
 python main_standalone.py
+```
+
+## Management: Installation, Updates & Rollbacks
+
+### Installation
+Pull and start the container using Docker Compose:
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+### Updates
+To update to the latest image version:
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+### Rollbacks
+To roll back to a specific version or tag:
+1. Edit `docker-compose.yml` image line to reference a specific tag or version (e.g. `ghcr.io/shsm0520/supabasezombi:v1.0.0` or `<commit-sha>`):
+```yaml
+services:
+  supabasezombi:
+    image: ghcr.io/shsm0520/supabasezombi:v1.0.0
+```
+2. Apply the change:
+```bash
+docker-compose up -d
 ```
 
 ## Logs
@@ -225,7 +251,7 @@ Get daily reports via Telegram:
 
 1. Create bot via [@BotFather](https://t.me/BotFather)
 2. Get your Chat ID via [@userinfobot](https://t.me/userinfobot)
-3. Uncomment and edit in `docker-compose.yml`:
+3. Uncomment and edit in `docker-compose.override.yml`:
    ```yaml
    environment:
      - TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
@@ -247,7 +273,7 @@ Additional features:
 - Randomized insert count (1-10 per run)
 - Automatic data cleanup when exceeds 50 entries
 - Simplified single-file implementation
-- No build required Docker deployment
+- Pre-built GHCR Docker deployment
 - Enhanced logging format
 - Telegram notification support
 
