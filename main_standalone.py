@@ -14,6 +14,7 @@ License: MIT
 
 import json
 import os
+import sys
 import logging
 import time
 import random
@@ -23,13 +24,104 @@ import requests
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
-# ========== Configuration ==========
-run_interval_hours = int(os.getenv('RUN_INTERVAL_HOURS', '24'))      # Run every 24 hours
-random_insert_min = int(os.getenv('RANDOM_INSERT_MIN', '1'))         # Minimum inserts per run
-random_insert_max = int(os.getenv('RANDOM_INSERT_MAX', '10'))        # Maximum inserts per run
-max_data_limit = int(os.getenv('MAX_DATA_LIMIT', '50'))              # Delete when exceeds this
-target_data_count = int(os.getenv('TARGET_DATA_COUNT', '30'))        # Target count after deletion
-max_runs_before_restart = int(os.getenv('MAX_RUNS_BEFORE_RESTART', '0'))  # 0 = never restart
+# ========== Helper Functions for Configuration & Validation ==========
+def parse_int_env(name: str, default: int) -> int:
+    val_str = os.getenv(name)
+    if val_str is None or val_str.strip() == '':
+        return default
+    try:
+        return int(val_str)
+    except ValueError as e:
+        raise ValueError(f"Environment variable '{name}' must be an integer (got: '{val_str}')") from e
+
+
+def get_validated_env_config():
+    """Load and validate environment variable settings."""
+    run_interval_hours = parse_int_env('RUN_INTERVAL_HOURS', 24)
+    random_insert_min = parse_int_env('RANDOM_INSERT_MIN', 1)
+    random_insert_max = parse_int_env('RANDOM_INSERT_MAX', 10)
+    max_data_limit = parse_int_env('MAX_DATA_LIMIT', 50)
+    target_data_count = parse_int_env('TARGET_DATA_COUNT', 30)
+    max_runs_before_restart = parse_int_env('MAX_RUNS_BEFORE_RESTART', 0)
+
+    if run_interval_hours <= 0:
+        raise ValueError(f"RUN_INTERVAL_HOURS must be greater than 0 (got: {run_interval_hours})")
+    if random_insert_min < 1:
+        raise ValueError(f"RANDOM_INSERT_MIN must be at least 1 (got: {random_insert_min})")
+    if random_insert_max < random_insert_min:
+        raise ValueError(f"RANDOM_INSERT_MAX ({random_insert_max}) must be greater than or equal to RANDOM_INSERT_MIN ({random_insert_min})")
+    if max_data_limit <= 0:
+        raise ValueError(f"MAX_DATA_LIMIT must be greater than 0 (got: {max_data_limit})")
+    if target_data_count < 0:
+        raise ValueError(f"TARGET_DATA_COUNT must be greater than or equal to 0 (got: {target_data_count})")
+    if target_data_count > max_data_limit:
+        raise ValueError(f"TARGET_DATA_COUNT ({target_data_count}) cannot exceed MAX_DATA_LIMIT ({max_data_limit})")
+    if max_runs_before_restart < 0:
+        raise ValueError(f"MAX_RUNS_BEFORE_RESTART must be greater than or equal to 0 (got: {max_runs_before_restart})")
+
+    return {
+        'run_interval_hours': run_interval_hours,
+        'random_insert_min': random_insert_min,
+        'random_insert_max': random_insert_max,
+        'max_data_limit': max_data_limit,
+        'target_data_count': target_data_count,
+        'max_runs_before_restart': max_runs_before_restart
+    }
+
+
+def validate_config_file(config_path='config.json'):
+    """Validate config.json file existence, JSON validity, structure, and database credentials."""
+    if not os.path.exists(config_path):
+        raise ValueError(f"Configuration file '{config_path}' not found.")
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as config_file:
+            configs = json.load(config_file)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Error parsing '{config_path}': {e}") from e
+
+    if not isinstance(configs, list):
+        raise ValueError(f"Configuration in '{config_path}' must be a JSON array (list).")
+
+    if len(configs) == 0:
+        raise ValueError(f"Configuration in '{config_path}' is empty. At least one database configuration is required.")
+
+    for idx, config in enumerate(configs, 1):
+        if not isinstance(config, dict):
+            raise ValueError(f"Server #{idx} configuration must be a JSON object.")
+
+        name = config.get('name')
+        if not name or not isinstance(name, str) or not name.strip():
+            raise ValueError(f"Server #{idx} is missing a valid 'name'.")
+
+        url = config.get('supabase_url')
+        if not url or not isinstance(url, str) or not url.strip():
+            raise ValueError(f"Server #{idx} ('{name}') is missing 'supabase_url'.")
+
+        key = config.get('supabase_key')
+        key_env_var = config.get('supabase_key_env')
+
+        if key_env_var:
+            if not isinstance(key_env_var, str) or not key_env_var.strip():
+                raise ValueError(f"Server #{idx} ('{name}') has an invalid 'supabase_key_env'.")
+            env_val = os.getenv(key_env_var)
+            if not env_val or not env_val.strip():
+                raise ValueError(f"Server #{idx} ('{name}') references environment variable '{key_env_var}' which is not set or empty.")
+        elif not key or not isinstance(key, str) or not key.strip():
+            raise ValueError(f"Server #{idx} ('{name}') must specify either 'supabase_key' or a valid 'supabase_key_env'.")
+
+        table_name = config.get('table_name', 'KeepAlive')
+        if not table_name or not isinstance(table_name, str) or not table_name.strip():
+            raise ValueError(f"Server #{idx} ('{name}') has an invalid 'table_name'.")
+
+    return configs
+
+
+def validate_all(config_path='config.json'):
+    """Validate both environment configuration and config.json file."""
+    env_cfg = get_validated_env_config()
+    configs = validate_config_file(config_path)
+    return env_cfg, configs
 
 # ========== Logging Setup ==========
 logging.basicConfig(
@@ -118,17 +210,19 @@ class SupabaseClient:
 
 
 # ========== Main Logic ==========
-def run_keepalive():
+def run_keepalive(env_cfg=None, configs=None, config_path='config.json'):
     """Execute the keep-alive logic once"""
-    try:
-        with open('config.json', 'r') as config_file:
-            configs = json.load(config_file)
-    except FileNotFoundError:
-        logging.error("Configuration file 'config.json' not found.")
-        return
-    except json.JSONDecodeError as e:
-        logging.error(f"Error parsing 'config.json': {e}")
-        return
+    if env_cfg is None or configs is None:
+        try:
+            env_cfg, configs = validate_all(config_path)
+        except ValueError as e:
+            logging.error(f"Configuration validation failed: {e}")
+            return
+
+    random_insert_min = env_cfg['random_insert_min']
+    random_insert_max = env_cfg['random_insert_max']
+    max_data_limit = env_cfg['max_data_limit']
+    target_data_count = env_cfg['target_data_count']
 
     # Read Telegram settings from environment variables
     telegram_bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '')
@@ -250,7 +344,16 @@ def run_keepalive():
 
 def main():
     """Main function that runs the keep-alive service continuously"""
-    logging.info("SupabaseZombi started. Running every 24 hours 🧟‍♂️")
+    try:
+        env_cfg, configs = validate_all('config.json')
+    except ValueError as e:
+        logging.error(f"❌ Startup configuration validation error: {e}")
+        sys.exit(1)
+
+    run_interval_hours = env_cfg['run_interval_hours']
+    max_runs_before_restart = env_cfg['max_runs_before_restart']
+
+    logging.info(f"SupabaseZombi started. Running every {run_interval_hours} hours 🧟‍♂️")
     if max_runs_before_restart > 0:
         logging.info(f"Service will restart after {max_runs_before_restart} runs")
     logging.info("")
@@ -259,19 +362,17 @@ def main():
     
     while True:
         try:
+            # Re-validate config before each run
+            env_cfg, configs = validate_all('config.json')
+            run_interval_hours = env_cfg['run_interval_hours']
+            max_runs_before_restart = env_cfg['max_runs_before_restart']
+
             run_count += 1
             current_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Get server count
-            try:
-                with open('config.json', 'r') as config_file:
-                    configs = json.load(config_file)
-                    server_count = len(configs)
-            except:
-                server_count = 0
+            server_count = len(configs)
             
             logging.info(f"== '{current_date}' Run start ({server_count} servers)")
-            run_keepalive()
+            run_keepalive(env_cfg, configs)
             
             # Check restart condition
             if max_runs_before_restart > 0 and run_count >= max_runs_before_restart:
@@ -288,6 +389,9 @@ def main():
         except KeyboardInterrupt:
             logging.info("Service stopped by user")
             break
+        except ValueError as e:
+            logging.error(f"❌ Configuration error during execution: {e}")
+            sys.exit(1)
         except Exception as e:
             logging.error(f"❌ Critical error: {e}")
             logging.info("Retrying in 1 hour...")
