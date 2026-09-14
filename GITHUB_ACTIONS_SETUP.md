@@ -2,7 +2,7 @@
 
 ## 개요
 
-- **GitHub Actions**: Docker 이미지를 빌드하고 레지스트리(Docker Hub, GHCR)에 push
+- **GitHub Actions**: Docker 이미지를 빌드하고 레지스트리(GHCR)에 push
 - **서버**: 빌드된 이미지를 pull 받아서 `.env` + `config.json`과 함께 실행
 
 ## 1. GitHub Actions 설정 (이미지 빌드 & Push)
@@ -20,7 +20,7 @@ GitHub Actions는 자동으로 GHCR(GitHub Container Registry)에 이미지를 p
 
 ### 빌드된 이미지 위치
 
-- GHCR: `ghcr.io/your-username/supabasezombi:latest`
+- GHCR: `ghcr.io/shsm0520/supabasezombi:latest`
 
 ## 2. 서버 배포 (이미지 Pull & 실행)
 
@@ -28,26 +28,22 @@ GitHub Actions는 자동으로 GHCR(GitHub Container Registry)에 이미지를 p
 
 ```bash
 # 1. 필요한 파일 다운로드
-git clone https://github.com/your-username/supabasezombi.git
+git clone https://github.com/shsm0520/supabasezombi.git
 cd supabasezombi
 
-# 2. .env 파일 생성
+# 2. .env 파일 생성 (선택 사항)
 cp .env.example .env
 # .env 편집하여 설정값 입력
 
-# 3. config.json 생성
+# 3. config.json 생성 (필수)
 cp config.json.example config.json
 # config.json 편집하여 Supabase 정보 입력
 
-# 4. docker-compose.yml에서 이미지 경로 수정
-# GITHUB_USERNAME을 자신의 GitHub 사용자명으로 변경
-export GITHUB_USERNAME=your-github-username
-
-# 5. 이미지 Pull & 실행
+# 4. 이미지 Pull & 실행
 docker-compose pull
 docker-compose up -d
 
-# 6. 로그 확인
+# 5. 로그 확인
 docker-compose logs -f
 ```
 
@@ -90,7 +86,7 @@ GitHub 이미지를 사용하지 않고 로컬에서 빌드:
 ```bash
 # docker-compose.yml 수정
 # 1. image: ghcr.io/... 줄을 주석처리
-# 2. build 섹션 주석 해제
+# 2. build: . 섹션 주석 해제
 
 # 빌드 & 실행
 docker-compose up --build -d
@@ -103,9 +99,9 @@ docker-compose up --build -d
    ↓
 2. GitHub Actions 자동 실행
    ↓
-3. Docker 이미지 빌드
+3. Docker 이미지 빌드 (requirements.txt 의존성 포함)
    ↓
-4. GHCR/Docker Hub에 Push
+4. GHCR에 Push
    ↓
 5. 서버에서 docker-compose pull
    ↓
@@ -141,7 +137,7 @@ docker-compose up --build -d
 docker-compose config
 
 # 수동으로 Pull 시도
-docker pull ghcr.io/your-username/supabasezombi:latest
+docker pull ghcr.io/shsm0520/supabasezombi:latest
 ```
 
 ## 6. 보안 고려사항
@@ -150,21 +146,27 @@ docker pull ghcr.io/your-username/supabasezombi:latest
 - 서버에만 실제 설정 파일 저장
 - Supabase 키는 절대 코드에 하드코딩하지 말것
 
-## 7. 업데이트 방법
+## 7. 업데이트 및 롤백 방법
 
-### 새 버전 배포
+### 새 버전 업데이트
 
 ```bash
-# 서버에서 실행
+# 최신 이미지 Pull & 재실행
 docker-compose pull
 docker-compose up -d
 ```
 
-### 특정 버전 사용
+### 특정 버전 지정 및 롤백
+
+`docker-compose.yml`에서 이미지 태그를 변경한 후 `docker-compose up -d`를 실행합니다:
 
 ```yaml
 # docker-compose.yml
 services:
   supabasezombi:
-    image: ghcr.io/your-username/supabasezombi:v1.0.0
+    image: ghcr.io/shsm0520/supabasezombi:v1.0.0 # 또는 이전 commit SHA / 특정 태그
+```
+
+```bash
+docker-compose up -d
 ```

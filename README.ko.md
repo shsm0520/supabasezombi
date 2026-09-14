@@ -2,13 +2,15 @@
 
 Supabase 데이터베이스를 좀비처럼 계속 살려두는 서비스입니다. 🧟‍♂️
 
+[English Documentation](README.md)
+
 ## 특징
 
 - 24시간마다 자동으로 실행
 - 매번 랜덤 1~10개 데이터 삽입
 - 50개 넘으면 자동 정리 (30개로 유지)
 - 여러 Supabase 데이터베이스 지원
-- Docker 컨테이너로 실행
+- GHCR 사전 빌드 Docker 이미지로 배포
 - 텔레그램 알림 지원 (선택 사항)
 
 ## 빠른 시작
@@ -101,8 +103,10 @@ services:
 
 ### Docker Compose 사용 (권장)
 
+사전 빌드된 GHCR 이미지(`ghcr.io/shsm0520/supabasezombi:latest`)를 사용합니다.
+
 ```bash
-# 서비스 시작 (빌드 없이 바로 실행!)
+# 서비스 시작 (최신 GHCR 이미지 다운로드 및 실행)
 docker-compose up -d
 
 # 로그 확인
@@ -111,31 +115,26 @@ docker-compose logs -f supabasezombi
 # 서비스 중지
 docker-compose down
 
-# 변경 후 재시작
+# 서비스 재시작
 docker-compose restart
 ```
 
-### Docker 직접 사용 (대안)
+### Docker CLI 직접 사용
+
+GHCR 이미지를 사용하여 Docker로 직접 실행:
 
 ```bash
-# 먼저 복제
-git clone https://github.com/shsm0520/supabasezombi.git
-cd supabasezombi
-
-# config.json 수정 후 실행
 docker run -d \
   --name supabasezombi \
   --restart unless-stopped \
-  -v $(pwd)/main_standalone.py:/app/main.py:ro \
   -v $(pwd)/config.json:/app/config.json:ro \
   -e TZ=Asia/Seoul \
-  python:3.11-slim \
-  sh -c "pip install --no-cache-dir supabase requests && python -u /app/main.py"
+  ghcr.io/shsm0520/supabasezombi:latest
 
 # 로그 확인
 docker logs -f supabasezombi
 
-# 컨테이너 중지
+# 컨테이너 중지 및 삭제
 docker stop supabasezombi
 docker rm supabasezombi
 ```
@@ -147,11 +146,40 @@ docker rm supabasezombi
 git clone https://github.com/shsm0520/supabasezombi.git
 cd supabasezombi
 
-# 의존성 설치
-pip install supabase requests
+# 고정된 의존성 설치
+pip install -r requirements.txt
 
-# 실행
+# config.json 생성 후 실행
 python main_standalone.py
+```
+
+## 패키지 관리: 설치, 업데이트 및 롤백
+
+### 설치 (Installation)
+Docker Compose를 사용하여 이미지 다운로드 및 컨테이너 실행:
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+### 업데이트 (Updates)
+최신 패키지/이미지 버전으로 업데이트:
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+### 롤백 (Rollback)
+특정 버전이나 이전 이미지로 롤백:
+1. `docker-compose.yml` 파일에서 이미지 태그를 원하는 버전(예: `ghcr.io/shsm0520/supabasezombi:v1.0.0` 또는 특정 `<commit-sha>`)으로 변경:
+```yaml
+services:
+  supabasezombi:
+    image: ghcr.io/shsm0520/supabasezombi:v1.0.0
+```
+2. 변경 사항 적용:
+```bash
+docker-compose up -d
 ```
 
 ## 로그
@@ -165,7 +193,7 @@ docker logs -f supabasezombi
 출력 예시:
 
 ```
-2025-10-30 09:00:00 - INFO - KeepAlive service started. Running every 24 hours
+2025-10-30 09:00:00 - INFO - SupabaseZombi started. Running every 24 hours 🧟‍♂️
 
 2025-10-30 09:00:00 - INFO - == '2025-10-30 09:00:00' Run start (2 servers)
 2025-10-30 09:00:00 - INFO - = Server #1: My Database
@@ -223,7 +251,7 @@ docker restart supabasezombi
 
 1. [@BotFather](https://t.me/BotFather)에서 봇 생성
 2. [@userinfobot](https://t.me/userinfobot)에서 Chat ID 확인
-3. `docker-compose.yml`에서 주석 해제하고 값 입력:
+3. `docker-compose.override.yml`에서 주석 해제하고 값 입력:
    ```yaml
    environment:
      - TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
@@ -245,7 +273,7 @@ docker restart supabasezombi
 - 랜덤 삽입 개수 (실행당 1-10개)
 - 50개 초과 시 자동 정리 기능
 - 단일 파일로 간소화
-- 빌드 없이 바로 실행 가능한 Docker 배포
+- GHCR 사전 빌드 Docker 배포
 - 개선된 로그 형식
 - 텔레그램 알림 지원
 

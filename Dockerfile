@@ -3,8 +3,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 의존성 설치
+COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --quiet --no-warn-script-location --disable-pip-version-check \
-    supabase requests
+    -r requirements.txt
 
 # 파일 복사
 COPY main_standalone.py main.py
