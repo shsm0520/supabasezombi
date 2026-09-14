@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  supabasezombi:
+    image: ghcr.io/shsm0520/supabasezombi:latest
+    container_name: supabasezombi
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./config.json:/app/config.json:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
